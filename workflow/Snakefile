@@ -1,0 +1,388 @@
+#adapted from Félix-antoine Trifiro's pipeline
+""" 
+This pipeline performs all step of  a proteomics analysis from raw file to the
+proteins identification with ProteinProphet. It also perform FDR control evaluation with FDRBench
+
+N.B. The transproteomic pipeline (TPP) needs to be installed and added to PATH.
+
+It can be runned via the following command:
+    # snakemake --cores 12 --use-singularity --resources mem_gb=64 --use-conda
+snakemake --cores 12 --use-singularity --use-conda --singularity-args "-B /project/def-marie87/glaudea/FDRbench_pipeline"
+NOTE: convert_raw rule has been marked as using 16 GB of ram, but this greatly
+      varies depending of the dataset. 
+"""
+configfile: "../config/config.yaml"
+
+
+
+
+#result_entrapment = ["results/{dataset}/msfragger_entrapment_search/{sample}/{sample}_prophet.pepXML"]
+#DATASETS = list(config["samples"].keys())
+
+prophet_ent = [
+    f"results/{dataset}/ms_fragger/msfragger_entrapment_search_{seed}/{sample}/{sample}_entrapment_prophet.pepXML"
+    for dataset, samples in config["samples"].items()
+    for sample in samples
+    for seed in config["path"]["seeds"]
+  ]
+
+prophet_search = [
+    f"results/{dataset}/ms_fragger/search/{sample}/{sample}_prophet.pepXML"
+    for dataset, samples in config["samples"].items()
+    for sample in samples
+    for seed in config["path"]["seeds"]
+  ]
+
+final_results = [
+    f"results/{dataset}/ms_fragger/final/{sample}/nc_final.tsv"
+    for dataset, samples in config["samples"].items()
+    for sample in samples
+    for seed in config["path"]["seeds"]
+  ]
+
+FDP = [
+    f"results/{dataset}/ms_fragger/FDP/{sample}/can_FDR_fdrbench_{seed}.txt"
+    for dataset, samples in config["samples"].items()
+    for sample in samples
+    for seed in config["path"]["seeds"]
+  ]
+
+test = [
+    f"results/{dataset}/ms_fragger/search/{sample}/canonicals_psm.tsv"
+    for dataset, samples in config["samples"].items()
+    for sample in samples
+    for seed in config["path"]["seeds"]
+  ]
+
+
+rule all:
+    input:
+        #final_results,
+        #result_search,
+        #result_entrapment,
+        #result_FDR,
+        test
+
+rule add_contams:
+    input:
+        fasta="data/fasta/{dataset}.fasta",
+        contam="data/contam/crap_contam.fasta"
+
+    output:
+        fasta_crap="data/fasta/{dataset}_contam.fasta"
+    shell:
+        """
+        cat {input.fasta} > {output.fasta_crap}
+        cat {input.contam} >> {output.fasta_crap}
+        sed -i 's/\*/X/g' {output.fasta_crap}
+        """
+ 
+rule convert_raw:
+    """Use msconvert to convert raw files to mzML."""
+    input:
+        raw="data/raw/{dataset}/{sample}.raw"
+    output:
+        mzml="data/mzml/{dataset}/{sample}.mzML"
+    params:
+        outdir="data/mzml/{dataset}/"
+    resources:
+        mem_gb=16
+    singularity:
+        "docker://chambm/pwiz-skyline-i-agree-to-the-vendor-licenses"
+    log:
+        "logs/{dataset}/{sample}/convert_raw.log"
+    shell:
+        "(wine msconvert {input.raw} "
+        "--mzML "
+        "--outdir {params.outdir} "
+        "--zlib "
+        '--filter "peakPicking" '
+        '--filter "zeroSamples removeExtra 1-" ) &> {log}'
+
+###################### partie entrapment ###########
+
+
+rule generate_entrapment_db:
+    input:
+        fasta="data/fasta/{dataset}_contam.fasta"
+    output:
+        txt="results/database/{dataset}/{dataset}_FDR_entrapment_{seed}.txt",
+        fasta_entrapment="results/database/{dataset}/{dataset}_FDR_entrapment_{seed}.fasta"
+    params:
+        fdrbench=config["path"]["fdrbench"]
+    log:
+        "logs/{dataset}/entrapment/generate_entrapment_{dataset}_{seed}.log"
+    wildcard_constraints:
+        seed = config["path"]["seeds"]
+    shell:
+        "("
+        "java -jar {params.fdrbench} "
+        "-enzyme 1 "
+        "-fix_nc c "
+        "-level peptide "
+        "-db {input.fasta} "
+        "-o {output.txt} "
+        "-uniprot "
+        "-seed {wildcards.seed} "
+        "-miss_c 2 "
+        "-minLength 7 "
+        "-maxLength 35"
+        ") > {log}"
+
+
+rule modify_headers:
+    "Clarify header from entrapment database"
+    input:
+        txt = rules.generate_entrapment_db.output.txt
+    output:
+        fasta_entrapment_headers = "results/database/{dataset}/{dataset}_{seed}_entrap_FDR_headers.fasta"
+    log:
+        "logs/{dataset}/database/modify_header_{dataset}_{seed}.log"
+    script:
+        "scripts/modify_header.py"
+
+rule decoys_ent_db:
+    input:
+        fasta_entrapment_headers=rules.modify_headers.output.fasta_entrapment_headers
+    output:
+        fasta_entrapment_search_decoys_db="results/database/{dataset}/{dataset}_{seed}_FDR_entrapment_decoys.fasta"
+    singularity:
+        "docker://spctools/tpp:version7.2.0"
+    log:
+        "logs/{dataset}/database/decoys_{dataset}_{seed}.log"
+    shell:
+        "(decoyFASTA -t DECOY_ {input.fasta_entrapment_headers} {output.fasta_entrapment_search_decoys_db}) &> {log} &&"
+        "python scripts/reverse_decoy.py --output {output.fasta_entrapment_search_decoys_db} --log {log}"
+
+rule msfragger_entrapment:
+    input:
+        mzml="data/mzml/{dataset}/{sample}.mzML",
+        fasta_entrapment_search_decoys_db=rules.decoys_ent_db.output.fasta_entrapment_search_decoys_db,
+    output:
+        pepxml_entrapment="/project/def-marie87/glaudea/FDRbench_pipeline/workflow/results/{dataset}/ms_fragger/msfragger_entrapment_search_{seed}/{sample}/{sample}_entrapment.pepXML"
+    params:
+        outdir="results/{dataset}/ms_fragger/msfragger_entrapment_search_{seed}/{sample}",
+        outfile= "data/mzml/{dataset}/{sample}",
+        fragger_params=config["path"]["fragger_entrapment_params"],
+        msfragger_jar=config["path"]["msfragger_jar"]
+    threads: 8
+    log:
+        "logs/{dataset}/entrapment/msfragger_entrapment_{dataset}_{sample}_{seed}.log"
+    shell:
+        r"""
+        mkdir -p "{params.outdir}" "$(dirname "{log}")"
+
+        PARAMS="{params.outdir}/{wildcards.sample}.fragger.params"
+        cp "{params.fragger_params}" "$PARAMS"
+
+        sed -i -E "s|^(database_name[[:space:]]*=[[:space:]]*).*(#.*)?$|\\1{input.fasta_entrapment_search_decoys_db} \\2|" "$PARAMS"
+        sed -i -E "s|^(num_threads[[:space:]]*=[[:space:]]*).*(#.*)?$|\\1{threads} \\2|" "$PARAMS"
+
+        module load java
+        java -Xmx50g -jar "{params.msfragger_jar}" "$PARAMS" "{input.mzml}" > "{log}" 2>&1
+        
+        mv {params.outfile}.pepXML {output.pepxml_entrapment} >> "{log}" 2>&1
+        """
+
+rule pep_prophet_entrapment:
+    input:
+        database=rules.decoys_ent_db.output.fasta_entrapment_search_decoys_db,
+        entrapment_pepxml=rules.msfragger_entrapment.output.pepxml_entrapment
+    output:
+        entrapment_prophet_pepxml="results/{dataset}/ms_fragger/msfragger_entrapment_search_{seed}/{sample}/{sample}_entrapment_prophet.pepXML"
+    resources:
+        mem_gb=10
+    threads: 8
+    singularity:
+        "docker://spctools/tpp:version6.1"
+    log:
+        "logs/{dataset}/entrapment/pep_prophet_entrapment_{dataset}_{sample}_{seed}.log"
+    shell:
+        """xinteract -dDECOY_ -N{output.entrapment_prophet_pepxml} -D{input.database} {input.entrapment_pepxml} > {log} 2>&1
+        """
+
+###### analyse avec database classique , avec ajout decoy
+
+rule decoys_db:
+    input:
+        fasta="data/fasta/{dataset}_contam.fasta",
+    output:
+        fasta_search_decoys_db="results/database/{dataset}/{dataset}_contam_decoys.fasta"
+    singularity:
+        "docker://spctools/tpp:version7.2.0"
+    log:
+        "logs/{dataset}/database/decoys_{dataset}.log"
+    shell:
+        "(decoyFASTA -t DECOY_ {input.fasta} {output.fasta_search_decoys_db}) &> {log}"
+
+rule msfragger_search:
+    input:
+        mzml=rules.convert_raw.output.mzml,
+        fasta_decoys=rules.decoys_db.output.fasta_search_decoys_db
+    output:
+        pepxml="results/{dataset}/ms_fragger/search/{sample}/{sample}.pepXML"
+    params:
+        outdir="results/{dataset}/ms_fragger/search/{sample}",
+        outfile= "data/mzml/{dataset}/{sample}.pepXML",
+        fragger_params=config["path"]["fragger_params"],
+        msfragger_jar=config["path"]["msfragger_jar"]
+    threads: 8
+    log:
+        "logs/{dataset}/classic/msfragger_{dataset}_{sample}.log"
+    shell:
+        r"""
+        set -euo pipefail
+        mkdir -p "{params.outdir}" "$(dirname "{log}")"
+
+        PARAMS="{params.outdir}/{wildcards.sample}.fragger.params"
+        cp "{params.fragger_params}" "$PARAMS"
+
+        sed -i -E "s|^(database_name[[:space:]]*=[[:space:]]*).*(#.*)?$|\\1{input.fasta_decoys} \\2|" "$PARAMS"
+        sed -i -E "s|^(num_threads[[:space:]]*=[[:space:]]*).*(#.*)?$|\\1{threads} \\2|" "$PARAMS"
+
+        module load java
+        java -Xmx50g -jar "{params.msfragger_jar}" "$PARAMS" "{input.mzml}" > "{log}" 2>&1
+        mv -f "{params.outfile}" "{output.pepxml}"
+        """
+
+rule pep_prophet:
+    input:
+        database=rules.decoys_db.output.fasta_search_decoys_db,
+        pepxml=rules.msfragger_search.output.pepxml
+    output:
+        prophet_pepxml="results/{dataset}/ms_fragger/search/{sample}/{sample}_prophet.pepXML"
+    resources:
+        mem_gb=10
+    threads: 8
+    singularity:
+        "docker://spctools/tpp:version6.1"
+    log:
+        "logs/{dataset}/classic/pep_prophet_{dataset}_{sample}.log"
+    shell:
+        """
+        xinteract -dDECOY_ -N{output.prophet_pepxml} -D{input.database} {input.pepxml} > {log} 2>&1
+        """
+
+#rule protein_prophet:
+#    """ Use ProteinProphet for the protein inference """
+#    input:
+#        pepxml="results/{dataset}/{sample}_prophet.pepXML",
+#    output:
+#        protxml="results/{dataset}/{sample}.protXML",
+#    #wildcard_constraints:
+#    #    sample=sample_re,
+#    resources:
+#        mem_gb=10,
+#    threads: 8
+#    singularity:
+#        "docker://spctools/tpp:version6.1"
+#    shell:
+#        "ProteinProphet {input.pepxml} {output.protxml}"
+
+rule pickles:
+    "Make a pkl of canonical and non canonical peptide from the entrapment database"
+    input:
+        entrapment = rules.decoys_ent_db.output.fasta_entrapment_search_decoys_db,
+        search=rules.decoys_db.output.fasta_search_decoys_db
+    output:
+        check_prot="results/database/{dataset}/{dataset}_{seed}_check_prot.pkl",
+        entrapment_pep="results/database/{dataset}/{dataset}_{seed}_entrapment_pep.pkl",
+    params:
+        outpath="results/database/{dataset}/{dataset}_{seed}_"
+    log:
+        "logs/{dataset}/database/pickles_{seed}.log"
+    conda:
+        "../envs/fdrbench.yml"
+    script:
+        "scripts/pickles.py"
+
+rule convert_xml_tsv:
+    """ Convert xml output from Prophet to tsv """
+    input:
+        pepxml="results/{dataset}/ms_fragger/msfragger_entrapment_search_{seed}/{sample}/{sample}_entrapment_prophet.pepXML",
+        check_prot = rules.pickles.output.check_prot
+    output:
+        c_tsv="results/{dataset}/ms_fragger/msfragger_entrapment_search_{seed}/{sample}/canonicals.tsv",
+        nc_tsv="results/{dataset}/ms_fragger/msfragger_entrapment_search_{seed}/{sample}/non_canonicals.tsv"
+    params:
+        outpath="results/{dataset}/ms_fragger/msfragger_entrapment_search_{seed}/{sample}/"
+    log:
+        "logs/{dataset}/convert/convert_xml_{dataset}_{sample}_{seed}.log"
+    conda:
+        "../envs/fdrbench.yml"
+    script:
+        "scripts/tsvs_for_FDR.py"
+
+
+
+rule convert_xml_tsv_search:
+    """sortir les psms et leur q_value"""
+    input:
+        pepxml="results/{dataset}/ms_fragger/search/{sample}/{sample}_prophet.pepXML",
+        check_prot ="results/database/{dataset}/{dataset}_1_check_prot.pkl"
+    output:
+        c_psm="results/{dataset}/ms_fragger/search/{sample}/canonicals_psm.tsv",
+        nc_psm="results/{dataset}/ms_fragger/search/{sample}/non_canonicals_psm.tsv"
+    params:
+        outpath="results/{dataset}/ms_fragger/search/{sample}/"
+    log:
+        "logs/{dataset}/convert/convert_xml_search_{dataset}_{sample}.log"
+    conda:
+        "../envs/fdrbench.yml"
+    script:
+        "scripts/tsvs_for_FDR_search.py"
+
+
+
+rule calculate_fdp:
+    " Run FDRbench on the percolator output to estimate FDP "
+    input:
+        c_tsv="results/{dataset}/ms_fragger/msfragger_entrapment_search_{seed}/{sample}/canonicals.tsv",
+        nc_tsv="results/{dataset}/ms_fragger/msfragger_entrapment_search_{seed}/{sample}/non_canonicals.tsv",
+        pairs="results/database/{dataset}/{dataset}_FDR_entrapment_{seed}.txt"
+    output:
+        c_fdp="results/{dataset}/ms_fragger/FDP/{sample}/can_FDR_fdrbench_{seed}.txt",
+        nc_fdp="results/{dataset}/ms_fragger/FDP/{sample}/nc_FDR_fdrbench_{seed}.txt"
+    params:
+        fdrbench=config["path"]["fdrbench"]
+    log:
+        "logs/{dataset}/{sample}/FDP_{seed}.log"
+    shell:
+        "(java -jar {params.fdrbench} "
+        "-i {input.c_tsv} "
+        "-fold 1 "
+        "-pep {input.pairs} "
+        "-level peptide "
+        "-o {output.c_fdp}) &> {log} ; "
+
+        "(java -jar {params.fdrbench} "
+        "-i {input.nc_tsv} "
+        "-fold 1 "
+        "-pep {input.pairs} "
+        "-level peptide "
+        "-o {output.nc_fdp}) &>> {log}"
+
+rule final_output:
+    input:
+#        c_FDR = ["results/{dataset}/ms_fragger/FDP/{sample}/canonical_FDR_fdrbench.txt"],
+#        nc_FDR = ["results/{dataset}/ms_fragger/FDP/{sample}/nc_FDR_fdrbench.txt"],
+#        entrapment_pep=["results/database/{dataset}/{dataset}_entrapment_pep.pkl"],
+#        prophet = "results/{dataset}/ms_fragger/search/{sample}/{sample}_prophet.pepXML",
+#        check_prot="results/database/{dataset}/{dataset}_check_prot.pkl"
+        c_FDR = expand("results/{dataset}/ms_fragger/FDP/{sample}/can_FDR_fdrbench_{seed}.txt", seed=config["path"]["seeds"], allow_missing=True),
+        nc_FDR = expand("results/{dataset}/ms_fragger/FDP/{sample}/nc_FDR_fdrbench_{seed}.txt", seed=config["path"]["seeds"], allow_missing=True),
+        entrapment_pep=expand("results/database/{dataset}/{dataset}_{seed}_entrapment_pep.pkl",  seed=config["path"]["seeds"], allow_missing=True),
+        prophet = "results/{dataset}/ms_fragger/search/{sample}/{sample}_prophet.pepXML",
+        check_prot= "results/database/{dataset}/{dataset}_1_check_prot.pkl",
+    output:
+        can_final = "results/{dataset}/ms_fragger/final/{sample}/canonical_final.tsv",
+        nc_final = "results/{dataset}/ms_fragger/final/{sample}/nc_final.tsv"
+    params:
+        outpath = "results/{dataset}/ms_fragger/final/{sample}/",
+        seeds = config["path"]["seeds"]
+    log:
+        "logs/{dataset}/{sample}/FINAL.log"
+    conda:
+        "../envs/fdrbench.yml"
+    script:
+        "scripts/final_filtration.py"
