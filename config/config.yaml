@@ -1,91 +1,51 @@
 # =========================
-#  ÉCHANTILLONS (runs .raw)
+#  SAMPLES (runs .raw)
 # =========================
 samples:
   SK-N-Be2C:
-    - SK-N-Be2C_1-1
-    - SK-N-Be2C_1-2
-    - SK-N-Be2C_1-3
-    - SK-N-Be2C_2-1
-    - SK-N-Be2C_2-2
-    - SK-N-Be2C_2-3
+    - SK-N-Be2C_shControl_1-2
+    - SK-N-Be2C_shControl_1-3
+    - SK-N-Be2C_shControl_2-2
+
+
+    - 20180227_QEp5_ViGi_SA_SKN-2_01
+    - 20180228_QEp5_ViGi_SA_SKN-2_02
+    - 20180228_QEp5_ViGi_SA_SKN-2_03
+#    - SK-N-Be2C_1-1
+#    - SK-N-Be2C_1-2
+#    - SK-N-Be2C_1-3
+#    - SK-N-Be2C_2-1
+#    - SK-N-Be2C_2-2
+#    - SK-N-Be2C_2-3
+
 
   SH-SY5Y:
-    - Replicate1_Fraction1
-    - Replicate1_Fraction2
-    - Replicate1_Fraction3
-    - Replicate1_Fraction4
-    - Replicate1_Fraction5
-    - Replicate1_Fraction6
-    - Replicate1_Fraction7
-    - Replicate1_Fraction8
-    - Replicate2_Fraction1
-    - Replicate2_Fraction2
-    - Replicate2_Fraction3
-    - Replicate2_Fraction4
-    - Replicate2_Fraction5
-    - Replicate2_Fraction6
-    - Replicate2_Fraction7
-    - Replicate2_Fraction8
-    - Replicate3_Fraction1
-    - Replicate3_Fraction2
-    - Replicate3_Fraction3
-    - Replicate3_Fraction4
-    - Replicate3_Fraction5
-    - Replicate3_Fraction6
-    - Replicate3_Fraction7
-    - Replicate3_Fraction8
-
-
-# =========================================
-#  GROUPES BIOLOGIQUES POUR GROUPWALK (FDR)
-# =========================================
-# On dit quels runs techniques appartiennent à quel bio.
-groupwalk_bio:
-  SK-N-Be2C:
-    SK-N-Be2C_1:
-      - SK-N-Be2C_1-1
-      - SK-N-Be2C_1-2
-      - SK-N-Be2C_1-3
-    SK-N-Be2C_2:
-      - SK-N-Be2C_2-1
-      - SK-N-Be2C_2-2
-      - SK-N-Be2C_2-3
-
-  # Exemple futur pour SH-SY5Y (3 bios, chacun avec 8 fractions)
-   SH-SY5Y:
-     SH-SY5Y_Rep1:
-       - Replicate1_Fraction1
-       - Replicate1_Fraction2
-       - Replicate1_Fraction3
-       - Replicate1_Fraction4
-       - Replicate1_Fraction5
-       - Replicate1_Fraction6
-       - Replicate1_Fraction7
-       - Replicate1_Fraction8
-     SH-SY5Y_Rep2:
-       - Replicate2_Fraction1
-       - Replicate2_Fraction2
-       - Replicate2_Fraction3
-       - Replicate2_Fraction4
-       - Replicate2_Fraction5
-       - Replicate2_Fraction6
-       - Replicate2_Fraction7
-       - Replicate2_Fraction8
-     SH-SY5Y_Rep3:
-       - Replicate3_Fraction1
-       - Replicate3_Fraction2
-       - Replicate3_Fraction3
-       - Replicate3_Fraction4
-       - Replicate3_Fraction5
-       - Replicate3_Fraction6
-       - Replicate3_Fraction7
-       - Replicate3_Fraction8
+#      - SY5Y_undiff_R1
+#      - SY5Y_undiff_R2
+#      - SY5Y_undiff_R3
+      - 20201027_LP_MB_SHSY5Y_control_R1
+      - 20201027_LP_MB_SHSY5Y_control_R2
+      - 20201027_LP_MB_SHSY5Y_control_R3
+#      - SY5Y_1-1
+#      - SY5Y_1-2
+#      - SY5Y_2-1
+#      - SY5Y_2-2
+#      - SY5Y_3-1
+#      - SY5Y_3-2
 
 
 # ======================
-#  BASES DE DONNÉES FASTA
+#  FASTA DATABASE
 # ======================
-# Version simple : une liste (si tu n’as qu’une DB principale).
+
 databases:
   - SK-N-Be2C_contam.fasta
+
+path:
+  fdrbench: "/project/def-marie87/glaudea/tools/FDRBench/fdrbench-0.0.4/fdrbench-0.0.4.jar"
+  comet_params: "../config/comet.params"
+  comet_entrapment_params: "../config/comet_entrapment.params"
+  fragger_params: "../config/closed_fragger.params"
+  fragger_entrapment_params: "../config/closed_entrapment_fragger.params"
+  msfragger_jar: "../../tools/MSFragger/MSFragger-4.3/MSFragger-4.3.jar"
+  seeds: [1, 2, 3]
