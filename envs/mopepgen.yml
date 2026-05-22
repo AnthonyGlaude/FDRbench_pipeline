@@ -1,0 +1,14 @@
+name: mopepgen
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - pip
+  - numpy
+  - biopython
+  - matplotlib
+  - pillow
+  - libtiff
+  - setuptools<81
+  - pip:
+      - mopepgen
