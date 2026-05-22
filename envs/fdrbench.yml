@@ -1,0 +1,17 @@
+name: fdrbench
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - python=3.10
+  - pip
+  - pandas
+  - numpy
+  - lxml
+  - pyteomics
+  - biopython
+
+  - r-base>=4.2
+  - r-tidyverse
+  - r-devtools
