@@ -15,7 +15,6 @@ configfile: "../config/config.yaml"
 
 
 
-
 #result_entrapment = ["results/{dataset}/msfragger_entrapment_search/{sample}/{sample}_prophet.pepXML"]
 #DATASETS = list(config["samples"].keys())
 
@@ -57,19 +56,19 @@ test = [
 
 rule all:
     input:
-        #final_results,
+        final_results,
         #result_search,
         #result_entrapment,
         #result_FDR,
-        test
+        #test
 
 rule add_contams:
     input:
-        fasta="data/fasta/{dataset}.fasta",
+        fasta="data/fasta/{dataset}/{dataset}.fasta",
         contam="data/contam/crap_contam.fasta"
 
     output:
-        fasta_crap="data/fasta/{dataset}_contam.fasta"
+        fasta_crap="data/fasta/{dataset}/{dataset}_contam.fasta"
     shell:
         """
         cat {input.fasta} > {output.fasta_crap}
@@ -80,7 +79,7 @@ rule add_contams:
 rule convert_raw:
     """Use msconvert to convert raw files to mzML."""
     input:
-        raw="data/raw/{dataset}/{sample}.raw"
+        raw="../../../FDRbench_pipeline/workflow/data/raw/{dataset}/{sample}.raw"
     output:
         mzml="data/mzml/{dataset}/{sample}.mzML"
     params:
@@ -104,7 +103,7 @@ rule convert_raw:
 
 rule generate_entrapment_db:
     input:
-        fasta="data/fasta/{dataset}_contam.fasta"
+        fasta=rules.add_contams.output.fasta_crap
     output:
         txt="results/database/{dataset}/{dataset}_FDR_entrapment_{seed}.txt",
         fasta_entrapment="results/database/{dataset}/{dataset}_FDR_entrapment_{seed}.fasta"
@@ -128,7 +127,6 @@ rule generate_entrapment_db:
         "-minLength 7 "
         "-maxLength 35"
         ") > {log}"
-
 
 rule modify_headers:
     "Clarify header from entrapment database"
@@ -205,7 +203,7 @@ rule pep_prophet_entrapment:
 
 rule decoys_db:
     input:
-        fasta="data/fasta/{dataset}_contam.fasta",
+        fasta="data/fasta/{dataset}/{dataset}_contam.fasta",
     output:
         fasta_search_decoys_db="results/database/{dataset}/{dataset}_contam_decoys.fasta"
     singularity:
@@ -313,8 +311,6 @@ rule convert_xml_tsv:
     script:
         "scripts/tsvs_for_FDR.py"
 
-
-
 rule convert_xml_tsv_search:
     """sortir les psms et leur q_value"""
     input:
@@ -331,8 +327,6 @@ rule convert_xml_tsv_search:
         "../envs/fdrbench.yml"
     script:
         "scripts/tsvs_for_FDR_search.py"
-
-
 
 rule calculate_fdp:
     " Run FDRbench on the percolator output to estimate FDP "
