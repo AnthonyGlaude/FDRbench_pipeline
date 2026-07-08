@@ -2,12 +2,12 @@
 #  SAMPLES (runs .raw)
 # =========================
 samples:
-  SK-N-Be2C:
-    - SK-N-Be2C_shControl_1-2
-    - SK-N-Be2C_shControl_1-3
-    - SK-N-Be2C_shControl_2-2
+#  SK-N-Be2C:
+#    - SK-N-Be2C_shControl_1-2
+#    - SK-N-Be2C_shControl_1-3
+#    - SK-N-Be2C_shControl_2-2
 
-
+  SK-N-Be2:
     - 20180227_QEp5_ViGi_SA_SKN-2_01
     - 20180228_QEp5_ViGi_SA_SKN-2_02
     - 20180228_QEp5_ViGi_SA_SKN-2_03
@@ -17,7 +17,6 @@ samples:
 #    - SK-N-Be2C_2-1
 #    - SK-N-Be2C_2-2
 #    - SK-N-Be2C_2-3
-
 
   SH-SY5Y:
 #      - SY5Y_undiff_R1
@@ -33,7 +32,6 @@ samples:
 #      - SY5Y_3-1
 #      - SY5Y_3-2
 
-
 # ======================
 #  FASTA DATABASE
 # ======================
@@ -42,10 +40,27 @@ databases:
   - SK-N-Be2C_contam.fasta
 
 path:
-  fdrbench: "/project/def-marie87/glaudea/tools/FDRBench/fdrbench-0.0.4/fdrbench-0.0.4.jar"
+  # Proteomic paths
+  results_root: "../results"
+  fdrbench: "../../../tools/FDRBench/fdrbench-0.0.4/fdrbench-0.0.4.jar"
   comet_params: "../config/comet.params"
   comet_entrapment_params: "../config/comet_entrapment.params"
   fragger_params: "../config/closed_fragger.params"
   fragger_entrapment_params: "../config/closed_entrapment_fragger.params"
-  msfragger_jar: "../../tools/MSFragger/MSFragger-4.3/MSFragger-4.3.jar"
-  seeds: [1, 2, 3]
+  msfragger_jar: "../../../tools/MSFragger/MSFragger-4.3/MSFragger-4.3.jar"
+  seeds: [1, 2, 3, 4, 5]
+
+  # Analysis paths
+  analysis_outdir: "results"
+  digested_files: "../analysis/fasta_digéré"
+  mzml_root: "../data/mzml/"
+  ms2pip_output_root: "data/MS2PIP_intensities"
+
+
+
+  seq_to_ids_pkl:
+    SH-SY5Y: "/project/def-marie87/glaudea/Project_modularized/0_project_modularize/results/SRR43/translated/SRR43_seq_to_ids_cut.pkl"
+    SK-N-Be2: "/project/def-marie87/glaudea/Project_modularized/0_project_modularize/results/SRR46/translated/SRR46_seq_to_ids_cut.pkl"
+
+  final_qc:
+    ndp_threshold: 0.70
