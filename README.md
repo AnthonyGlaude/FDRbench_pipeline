@@ -902,36 +902,6 @@ fichiers filtrés, spectres et figures
 
 ---
 
-# 11. Reproductibilité
-
-Pour assurer la reproductibilité, conserver :
-
-* `config/config.yaml`;
-* les fichiers `.params` utilisés par MSFragger;
-* les seeds FDRBench;
-* les bases FASTA utilisées;
-* la base de contaminants;
-* les versions de MSFragger, FDRBench, Snakemake, TPP et Java;
-* les logs;
-* les fichiers `canonical_final.tsv` et `nc_final.tsv`;
-* les sorties de `workflow/post_analysis/`.
-
----
-
-# 12. Commandes utiles
-
-## Vérifier la version de Snakemake
-
-```bash
-snakemake --version
-```
-
-Version utilisée :
-
-```text
-7.32.4
-```
-
 ---
 
 ## Lancer le pipeline complet Snakemake
@@ -970,37 +940,6 @@ python main.py -c ../../config/config.yaml
 
 ---
 
-# 13. Notes importantes
-
-Les noms des datasets et des samples doivent être définis dans :
-
-```text
-config/config.yaml
-```
-
-Les noms de lignées, par exemple :
-
-```text
-SH-SY5Y
-SK-N-Be2
-```
-
-doivent provenir de la section :
-
-```yaml
-samples:
-```
-
-Il faut éviter de coder ces noms directement dans les scripts.
-
-Les catégories comme :
-
-```text
-canonical
-canonical_variant
-nc_wt
-nc_variant
-```
 
 ne correspondent pas aux datasets. Ce sont des catégories biologiques ou analytiques utilisées dans la post-analyse.
 
