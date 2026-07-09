@@ -937,10 +937,3 @@ cd workflow/post_analysis
 
 python main.py -c ../../config/config.yaml
 ```
-
----
-
-
-ne correspondent pas aux datasets. Ce sont des catégories biologiques ou analytiques utilisées dans la post-analyse.
-
-
