@@ -366,7 +366,7 @@ Paramètres principaux :
 -level peptide
 -uniprot
 -miss_c 2
--minLength 7
+-minLength 9
 -maxLength 35
 -seed <seed>
 ```
