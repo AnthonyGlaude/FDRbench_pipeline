@@ -55,7 +55,7 @@ path:
   digested_files: "../analysis/fasta_digéré"
   mzml_root: "../data/mzml/"
   ms2pip_output_root: "data/MS2PIP_intensities"
-
+  ipsa_input_root: "data/Spectra_list"
 
 
   seq_to_ids_pkl:
@@ -64,3 +64,12 @@ path:
 
   final_qc:
     ndp_threshold: 0.70
+
+ipsa_export:
+  enabled: True
+  input_name: "ipsa_spectra_input.tsv"
+  make_plots: true
+  normalize_to_basepeak: true
+  min_percent_basepeak: 1.0
+  fig_w: 12
+  fig_h: 5
