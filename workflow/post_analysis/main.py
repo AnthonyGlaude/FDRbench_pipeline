@@ -47,6 +47,8 @@ from modules.final_qc import run_final_qc
 # MODE 3 — figures
 from modules.run_all_figures import run_figures
 
+# MODE 4 - sortir des intensities pour IPSA 
+from modules.export_ipsa_spectra import run_ipsa_spectrum_export
 
 # ============================================================
 # CONFIG
@@ -324,6 +326,11 @@ def main():
         print("\nPipeline figures terminé.")
         return
 
+
+    ##############################
+    # Étape 9 - Export spectres IPSA
+    ##############################
+    ipsa_outputs = run_ipsa_spectrum_export(config)
     print("\nAucune étape lancée.")
 
 
