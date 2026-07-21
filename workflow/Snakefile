@@ -60,7 +60,7 @@ rule all:
         #result_search,
         #result_entrapment,
         #result_FDR,
-        #test
+        test
 
 rule add_contams:
     input:
