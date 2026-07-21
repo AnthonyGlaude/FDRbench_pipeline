@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 """
 Basic cleanup des résultats MSFragger/FDRBench.
 
