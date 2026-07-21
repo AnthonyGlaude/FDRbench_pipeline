@@ -1,6 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
 """
 Figure globale — Séquences ajoutées aux bases personnalisées.
 
