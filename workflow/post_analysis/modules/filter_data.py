@@ -1,6 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
 """
 Étape 3 — Filtrage / résumé des données peptidiques et PSM.
 
