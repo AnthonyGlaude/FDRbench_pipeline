@@ -1,6 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
 """
 Étape 4 — Génération des fichiers PEPREC pour MS2PIP.
 
